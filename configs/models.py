@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from dataclasses import dataclass, field
 
 
@@ -45,3 +45,20 @@ class ModelArguments:
         default=False,
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
     )
+
+    # Personalized Model Config
+    permutation_layers: bool = field(
+        default=False,
+        metadata={"help": "The flag controls model layers."},
+    )
+    client_model_layers: List[int] = field(
+        default_factory=list,
+        metadata={"help": "The client model's size, default=[0,1,2]"},
+    )
+    server_model_layers: List[int] = field(
+        default_factory=list,
+        metadata={"help": "The client model's size, default=[i for i in range(12)]"},
+    )
+
+    def __post_init__(self):
+        ...

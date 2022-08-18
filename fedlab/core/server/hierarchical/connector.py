@@ -48,7 +48,7 @@ class Connector(NetworkManager):
 
     def process_meessage_queue(self):
         """Define the procedure of dealing with message queue."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class ServerConnector(Connector):

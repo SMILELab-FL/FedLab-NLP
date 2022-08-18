@@ -1,4 +1,7 @@
-from abc import ABC, abstractmethod
+"""Base DataLoader for FedLab-NLP"""
+
+import os
+from abc import ABC
 from utils import registry, pickle_read
 from transformers import AutoTokenizer
 
@@ -38,10 +41,7 @@ class BaseDataLoader(ABC):
     def _load_centralized_data(self):
         raise NotImplementedError
 
-    def _transformer_data(self, data, data_list):
-        raise NotImplementedError
-
-    def _load_cached_data(self):
+    def _convert_examples_to_features(self):
         raise NotImplementedError
 
     def _load_attributes(self):
@@ -54,3 +54,22 @@ class BaseDataLoader(ABC):
 
     def _build_tokenizer(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_config.model_name_or_path)
+
+    @property
+    def cached_data_file(self):
+        if self.federated_config.rank != -1:
+            cached_file = os.path.join(
+                self.data_config.cache_dir,
+                f"models={self.model_config.model_type}_"
+                f"seq={self.data_config.max_seq_length}_"
+                f"clients={self.federated_config.clients_num}_"
+                f"alpha={self.federated_config.alpha}"
+            )
+        else:
+            cached_file = os.path.join(
+                self.data_config.cache_dir,
+                f"models={self.model_config.model_type}_"
+                f"seq={self.data_config.max_seq_length}_"
+                f"centralized"
+            )
+        return cached_file

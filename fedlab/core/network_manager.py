@@ -49,7 +49,7 @@ class NetworkManager(Process):
 
     def main_loop(self, *args, **kwargs):
         """Define the actions of communication stage."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def shutdown(self, *args, **kwargs):
         """Shutdown stage.

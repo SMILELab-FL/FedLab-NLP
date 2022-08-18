@@ -1,5 +1,8 @@
-import threading
+""" BaseServer for FedLab-NLP """
+
+import os
 import random
+import threading
 from abc import ABC
 
 import torch
@@ -15,10 +18,10 @@ from fedlab.core.coordinator import Coordinator
 
 
 class BaseSyncServerHandler(ParameterServerBackendHandler, ABC):
-    def __init__(self, model, valid_data, trainer=None):
+    def __init__(self, model, valid_data, test_data):
 
         self.valid_data = valid_data
-        self.trainer = trainer
+        self.test_data = test_data
 
         config = registry.get("config")
         self.model_config = config.model_config
@@ -43,14 +46,41 @@ class BaseSyncServerHandler(ParameterServerBackendHandler, ABC):
         self.global_round = config.federated_config.rounds
         self.round = 0
 
-        #  metrics
-        self.global_test_best_metric = float("inf") if self.training_config.is_decreased_valid_metric else -float("inf")
-        self.metric_log = {}
-
+        #  metrics & eval
+        self._build_metric()
+        self._build_eval()
+        self.global_valid_best_metric = \
+            float("inf") if self.training_config.is_decreased_valid_metric else -float("inf")
+        self.global_test_best_metric = 0.0
+        self.metric_log = {
+            "model_type": self.model_config.model_type,
+            "clients_num": self.federated_config.clients_num,
+            "alpha": self.federated_config.alpha, "task": self.data_config.task_name,
+            "fl_algorithm": self.federated_config.fl_algorithm,
+            "info": f"{self.model_config.model_type}_{self.federated_config.fl_algorithm}_"
+                    f"{self.federated_config.clients_num}_{self.federated_config.alpha}",
+            "logs": []
+        }
         # metric line
-        self.metric_name = self.trainer.metric.metric_name
-        self.metric_line = f"{self.model_config.model_type}_client={self.federated_config.clients_num}_" \
+        self.metric_name = self.metric.metric_name
+        times = registry.get("run_time")
+        self.metric_line = f"{times}_{self.model_config.model_type}_client={self.federated_config.clients_num}_" \
                            f"alpha={self.federated_config.alpha}_ci={self.federated_config.sample}_"
+
+        # global model
+        self.glo_save_file = os.path.join(
+            self.training_config.checkpoint_dir, f"{times}_{self.model_config.model_type}.pth")
+        self.best_glo_params = None
+
+    def _build_eval(self):
+        self.eval = registry.get_eval_class(self.training_config.metric_name)(
+            self.device, self.metric
+        )
+
+    def _build_metric(self):
+        self.metric = registry.get_metric_class(self.training_config.metric_name)(
+            self.data_config.task_name, self.training_config.is_decreased_valid_metric
+        )
 
     def stop_condition(self) -> bool:
         return self.round >= self.global_round
@@ -79,12 +109,11 @@ class BaseSyncServerHandler(ParameterServerBackendHandler, ABC):
             )
 
             # use aggregator
-            serialized_parameters = Aggregators.fedavg_aggregate(
-                model_parameters_list)
+            serialized_parameters = Aggregators.fedavg_aggregate(model_parameters_list)
             SerializationTool.deserialize_model(self._model, serialized_parameters)
             self.round += 1
 
-            self.test_on_server()
+            self.valid_on_server()
 
             # reset cache cnt
             self.client_buffer_cache = []
@@ -110,19 +139,73 @@ class BaseSyncServerHandler(ParameterServerBackendHandler, ABC):
         """
         return self.round >= self.global_round
 
+    def valid_on_server(self):
+
+        result = self.eval.test_and_eval(
+            model=self._model,
+            valid_dl=self.valid_data,
+            model_type=self.model_config.model_type,
+            model_output_mode=self.model_config.model_output_mode
+        )
+
+        self.on_round_end(result)
+
     def test_on_server(self):
-        raise NotImplementedError()
+
+        SerializationTool.deserialize_model(self._model, self.best_glo_params)
+
+        result = self.eval.test_and_eval(
+            model=self._model,
+            valid_dl=self.test_data,
+            model_type=self.model_config.model_type,
+            model_output_mode=self.model_config.model_output_mode
+        )
+
+        self.logger.critical(f"task: {self.data_config.task_name}, Setting: {self.metric_log['info']}, "
+                             f"Test {self.metric_name.upper()}: {result[self.metric_name]:.3f}")
+
+        self.global_test_best_metric = result[self.metric_name]
+
+        return result
+
+    def save_global_model(self):
+        torch.save(self.best_glo_params, self.glo_save_file)
+
+    def on_round_end(self, result):
+        test_metric, test_loss = result[self.metric_name], result["eval_loss"]
+
+        # TODO hard code
+        if self.global_valid_best_metric < test_metric:
+            self.global_valid_best_metric = test_metric
+            self.best_glo_params = SerializationTool.serialize_model(self._model)
+
+        self.logger.info(f"{self.data_config.task_name}-{self.model_config.model_type} "
+                         f"train with client={self.federated_config.clients_num}_"
+                         f"alpha={self.federated_config.alpha}_"
+                         f"epoch={self.training_config.num_train_epochs}_"
+                         f"seed={self.training_config.seed}_"
+                         f"comm_round={self.federated_config.rounds}")
+
+        self.logger.debug(f"{self.federated_config.fl_algorithm} Validating "
+                          f"Round: {self.round}, Current Loss: {test_loss:.3f}, "
+                          f"Current {self.metric_name}: {test_metric:.3f}, "
+                          f"Best {self.metric_name}: {self.global_valid_best_metric:.3f}")
+
+        self.metric_log["logs"].append(
+            {f"round_{self.round}": {
+                "loss": f"{test_loss:.3f}",
+                f"{self.metric.metric_name}": f"{test_metric:.3f}"
+            }
+            }
+        )
 
 
 class BaseServerManager(ServerManager):
     """Synchronous communication
 
-    This is the top class in our framework which is mainly responsible for network communication of SERVER!.
-    Synchronously communicate with clients following agreements defined in :meth:`main_loop`.
+    BaseServerManager.run()
+    setup() main_loop() shut_down()
 
-    Args:
-        network (DistNetwork): Network configuration and interfaces.
-        handler (ParameterServerBackendHandler): Backend calculation handler for parameter server.
     """
 
     def __init__(self, network, handler):

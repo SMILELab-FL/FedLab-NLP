@@ -49,11 +49,11 @@ class SerialTrainer(ClientTrainer):
             model_parameters (torch.Tensor): Serialized model parameters of one model.
             train_loader (torch.utils.data.DataLoader): :class:`torch.utils.data.DataLoader` for this client.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def _get_dataloader(self, client_id):
         """Get :class:`DataLoader` for ``client_id``."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def local_process(self, id_list, payload):
         """Train local model with different dataset according to client id in ``id_list``.

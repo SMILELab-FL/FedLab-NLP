@@ -6,7 +6,8 @@ class Registry:
         "data_name_mapping": {},
         "model_name_mapping": {},
         "fl_name_mapping": {},
-        "metric_name_mapping": {}
+        "metric_name_mapping": {},
+        "eval_name_mapping": {}
     }
 
     @classmethod
@@ -50,7 +51,7 @@ class Registry:
     @classmethod
     def register_data(cls, name):
         def wrap(func):
-            from data.base_data_loader import BaseDataLoader
+            from data.base_dataloader import BaseDataLoader
 
             assert issubclass(
                 func, BaseDataLoader
@@ -76,7 +77,7 @@ class Registry:
     @classmethod
     def register_fl_algorithm(cls, name):
         def wrap(func):
-            from trainers.base_fed_trainer import BaseTrainer
+            from trainers.FedBaseTrainer import BaseTrainer
 
             assert issubclass(
                 func, BaseTrainer
@@ -100,6 +101,19 @@ class Registry:
         return wrap
 
     @classmethod
+    def register_eval(cls, name):
+        def wrap(func):
+            from utils.evaluations import BaseEval
+
+            assert issubclass(
+                func, BaseEval
+            ), "All evaluation must inherit utils.evaluations.BaseEval class"
+            cls.mapping["eval_name_mapping"][name] = func
+            return func
+
+        return wrap
+
+    @classmethod
     def get_loss_class(cls, name):
         return cls.mapping["loss_name_mapping"].get(name, None)
 
@@ -118,6 +132,10 @@ class Registry:
     @classmethod
     def get_metric_class(cls, name):
         return cls.mapping["metric_name_mapping"].get(name, None)
+
+    @classmethod
+    def get_eval_class(cls, name):
+        return cls.mapping["eval_name_mapping"].get(name, None)
 
     @classmethod
     def unregister(cls, name):

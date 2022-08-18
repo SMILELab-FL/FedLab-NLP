@@ -1,0 +1,11 @@
+numpy
+wandb
+pandas
+loguru
+gpustat
+omegaconf
+matplotlib
+scikit-learn
+tensorboardX
+transformers
+torch==1.11

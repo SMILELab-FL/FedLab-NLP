@@ -1,5 +1,5 @@
-from data.base_data_loader import BaseDataLoader
-from data.glue_data_loader import GlueDataLoader
+from data.base_dataloader import BaseDataLoader
+from data.dataloader import GlueDataLoader
 
 __all__ = [
     "BaseDataLoader",

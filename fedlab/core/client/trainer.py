@@ -48,7 +48,7 @@ class ClientTrainer(ModelMaintainer):
             This attribute will be called by client manager.
             Customize it for new algorithms.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractclassmethod
     def local_process(self, payload) -> bool:
@@ -56,15 +56,15 @@ class ClientTrainer(ModelMaintainer):
         
             In synchronous mode, return True to end current FL round.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def train(self):
         """Override this method to define the algorithm of trainers your model. This function should manipulate :attr:`self._model`"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def evaluate(self):
         """Evaluate quality of local model."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class SGDClientTrainer(ClientTrainer):

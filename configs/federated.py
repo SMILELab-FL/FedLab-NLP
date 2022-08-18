@@ -1,3 +1,5 @@
+"""federated configs for FedLab-NLP"""
+
 from typing import Optional
 from dataclasses import dataclass, field
 
@@ -9,7 +11,7 @@ class FederatedTrainingArguments:
         metadata={"help": "The name of the federated learning algorithm"},
     )
     clients_num: int = field(
-        default=100,
+        default=10,
         metadata={"help": "The number of participant clients"},
     )
     alpha: Optional[float] = field(
@@ -21,13 +23,15 @@ class FederatedTrainingArguments:
         metadata={"help": "The partition methods"},
     )
     do_mimic: bool = field(
-        default=True, metadata={"help": "Important! we only process once data processing in server"}
+        default=True,
+        metadata={"help": "Important! we only process once data processing in server if True"}
     )
     ip: str = field(
         default="127.0.0.1"
     )
     port: str = field(
-        default="10001"
+        default="10001",
+        metadata={"help": "The torch.distribute find this port to transmit stuff."}
     )
     rank: int = field(
         default=0, metadata={"help": "-1: centralized, 0: server, >0: client"}
@@ -42,9 +46,11 @@ class FederatedTrainingArguments:
         default=100, metadata={"help": "The number of training round"}
     )
     sample: float = field(
-        default=0.1, metadata={"help": "The participant ratio in each training round"}
+        default=1, metadata={"help": "The participant ratio in each training round"}
     )
-
+    pson: bool = field(
+        default=False, metadata={"help": "Whether to use personalized test(local) metric"}
+    )
     _clients_num_per_sub_server: int = field(
         init=False, metadata={"help": "The number of clients in different works"}
     )
@@ -54,17 +60,8 @@ class FederatedTrainingArguments:
             # IID
             self.alpha = "inf"
 
-        if self.partition_method is None:
-            self.partition_method = f"clients={self.clients_num}_alpha={self.alpha}"
-
         if not self.do_mimic:
             print("Please check whether federated device has its own data")
-
-        if self.world_size is None:
-            raise ValueError(f"Must set world_size, but find {self.world_size}")
-        else:
-            if self.clients_num % (self.world_size-1):
-                raise ValueError(f"{self.clients_num} % {(self.world_size-1)} != 0")
 
     @property
     def clients_num_per_sub_server(self):

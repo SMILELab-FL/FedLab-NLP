@@ -13,7 +13,7 @@ class TrainArguments(TrainingArguments):
         default="glue", metadata={"help": "whether to load last checkpoint"}
     )
     loss_name: str = field(
-        default="xent"
+        default="xent", metadata={"help": "{xent: cross_entropy}"}
     )
     is_decreased_valid_metric: bool = field(
         default=False

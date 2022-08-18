@@ -27,3 +27,5 @@ def setup_logger():
     )
 
     registry.register("logger", logger)
+
+    return logger

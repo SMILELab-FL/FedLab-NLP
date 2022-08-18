@@ -121,6 +121,25 @@ def init_training_device(gpu):
     return device
 
 
+def global_metric_save(handler, training_config, logger):
+    pickle_write(handler.metric_log, training_config.metric_log_file)
+    handler.metric_line += f"valid_{handler.metric_name}={handler.global_valid_best_metric:.3f}_"
+    handler.metric_line += f"test_{handler.metric_name}={handler.global_test_best_metric:.3f}"
+    file_write(handler.metric_line, training_config.metric_file, "a+")
+    logger.info(f"watch training logs --> {training_config.metric_log_file}")
+    logger.info(f"training metric --> {training_config.metric_file}")
+
+
+def cen_metric_save(loc_trainer, training_config, logger):
+    test_metric = loc_trainer.loc_test_metric[-1]
+    valid_metric = loc_trainer.loc_best_metric[-1]
+    times = training_config.times
+    line = f"{times}_valid_{loc_trainer.metric_name}={valid_metric:.3f}_"
+    line += f"test_{loc_trainer.metric_name}={test_metric:.3f}"
+    file_write(line, training_config.metric_file, "a+")
+    logger.info(f"training metric --> {training_config.metric_file}")
+
+
 def setup_imports():
     from utils.register import registry
     # First, check if imports are already setup
@@ -151,4 +170,6 @@ def setup_imports():
                 splits[import_prefix_index:-1] + [module_name]
             )
             importlib.import_module(module)
+
+    registry.register("root_folder", root_folder)
     registry.register("imports_setup", True)

@@ -37,7 +37,7 @@ class ParameterServerBackendHandler(ModelMaintainer):
     @abstractproperty
     def downlink_package(self) -> List[torch.Tensor]:
         """Property for manager layer. BaseServer manager will call this property when activates clients."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractproperty
     def if_stop(self) -> bool:
@@ -46,7 +46,7 @@ class ParameterServerBackendHandler(ModelMaintainer):
 
     def _update_global_model(self, payload):
         """Override this function to define how to update global model (aggregation or optimization)."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class SyncParameterServerHandler(ParameterServerBackendHandler):
