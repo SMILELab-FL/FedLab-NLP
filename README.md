@@ -9,7 +9,7 @@
  </p>
  
 <h3 align="center">  
-    <p> 为联邦自然语言处理发展添瓦加砖 </p>  
+    <p> 致力于联邦自然语言处理发展 </p>  
 </h3>  
   
 1️⃣ 本项目来自 [SMILELab-FL](https://github.com/SMILELab-FL/FedLab-NLP) , 我们主要致力于联邦自然语言处理的发展；  
@@ -73,6 +73,9 @@ bash fed_run.sh {your_file_path}/workspace {task_name} fedavg 10001 {server_gpu_
 bash cen_run.sh {your_file_path}/workspace {task_name} centralized 10001 {server_gpu_id}
 ```
 ## Contributing
+
+## License
+[Apache License 2.0](https://github.com/SMILELab-FL/FedLab-NLP/blob/main/LICENSE)
 
 
 
